@@ -136,12 +136,18 @@ public class Main {
         JButton save = button("Enviar solicitud", GREEN);
         JButton clear = button("Limpiar formulario", RED);
         JButton query = button("Consultar estado", PRIMARY);
+        JButton logout = button("Cerrar sesión", RED);
         save.addActionListener(e -> form.save());
         clear.addActionListener(e -> form.clear());
         query.addActionListener(e -> form.queryStatus());
+        logout.addActionListener(e -> {
+            frame.dispose();
+            showPortal();
+        });
         actions.add(save);
         actions.add(clear);
         actions.add(query);
+        actions.add(logout);
         root.add(actions, BorderLayout.SOUTH);
         frame.setContentPane(root);
         frame.setVisible(true);
