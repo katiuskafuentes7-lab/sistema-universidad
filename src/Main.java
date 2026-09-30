@@ -1,4 +1,5 @@
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
@@ -6,11 +7,13 @@ import javax.swing.JFrame;
 import javax.swing.ImageIcon;
 import javax.imageio.ImageIO;
 import javax.swing.JLabel;
+import javax.swing.JSeparator;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
@@ -22,14 +25,19 @@ import javax.swing.table.JTableHeader;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.BorderLayout;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -55,6 +63,7 @@ public class Main {
     private static final ImageIcon UNIVERSITY_LOGO = loadUniversityLogo();
     private static final Path DATABASE = Path.of("data", "admision.db");
     private final ApplicantRepository repository = new ApplicantRepository(DATABASE);
+    private boolean nextWindowMaximized;
 
     @SuppressWarnings("unused")
     static void main(String[] args) {
@@ -80,27 +89,21 @@ public class Main {
 
         JPanel cards = new JPanel(new GridLayout(1, 2, 20, 0));
         cards.setOpaque(false);
-        Dimension cardsSize = new Dimension(780, 280);
-        cards.setPreferredSize(cardsSize);
-        cards.setMaximumSize(cardsSize);
+        Dimension cardsSize = new Dimension(860, 320);
         cards.add(portalCard("Portal del aspirante",
                 "Completa tu solicitud, adjunta los documentos requeridos y consulta el avance de tu admisión.",
-                PRIMARY, "01", "Registro y seguimiento", _ -> {
-                    frame.dispose();
-                    showApplicantPortal();
-                }));
+                PRIMARY, "01", "Registro y seguimiento",
+                _ -> navigate(frame, this::showApplicantPortal)));
         cards.add(portalCard("Portal administrativo",
                 "Revisa los expedientes y gestiona cada solicitud durante el proceso de admisión.",
                 new Color(48, 108, 119), "02", "Revisión de expedientes", _ -> {
                     if (adminLogin()) {
-                        frame.dispose();
-                        showAdminPortal();
+                        navigate(frame, this::showAdminPortal);
                     }
                 }));
-        JPanel cardsArea = new JPanel(new java.awt.GridBagLayout());
-        cardsArea.setOpaque(false);
-        cardsArea.add(cards);
-        root.add(cardsArea, BorderLayout.CENTER);
+        cards.setPreferredSize(cardsSize);
+        cards.setMaximumSize(cardsSize);
+        root.add(portalCardArea(cards), BorderLayout.CENTER);
 
         JLabel footer = new JLabel("Sistema de Admisión Universitaria  ·  Los datos se almacenan localmente",
                 SwingConstants.CENTER);
@@ -109,6 +112,63 @@ public class Main {
         root.add(footer, BorderLayout.SOUTH);
         frame.setContentPane(root);
         frame.setVisible(true);
+    }
+
+    private JPanel portalCardArea(JPanel cards) {
+        JPanel cardsArea = new JPanel(new java.awt.GridBagLayout()) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                super.paintComponent(graphics);
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int width = getWidth();
+                int height = getHeight();
+                g.setPaint(new GradientPaint(0, 0, new Color(244, 248, 252),
+                        width, height, new Color(250, 251, 253)));
+                g.fillRect(0, 0, width, height);
+
+                g.setStroke(new BasicStroke(1.2f));
+                g.setColor(new Color(25, 73, 126, 18));
+                int motifSize = Math.clamp(height / 3, 150, 220);
+                int centerX = width / 2;
+                int centerY = height / 2;
+                g.drawOval(centerX - motifSize / 2, centerY - motifSize / 2,
+                        motifSize, motifSize);
+                g.drawOval(centerX - motifSize / 2 + 12, centerY - motifSize / 2 + 12,
+                        motifSize - 24, motifSize - 24);
+
+                g.setStroke(new BasicStroke(1.5f));
+                g.setColor(new Color(25, 73, 126, 24));
+                g.drawArc(18, height / 2 - 74, 148, 148, 245, 230);
+                g.drawArc(width - 166, height / 2 - 74, 148, 148, 65, 230);
+                g.drawArc(42, 24, 82, 82, 185, 160);
+                g.drawArc(width - 124, height - 106, 82, 82, 5, 160);
+
+                g.setColor(new Color(183, 145, 67, 105));
+                g.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                int accent = 10;
+                g.drawLine(52, 38, 52 + accent, 38);
+                g.drawLine(52, 38 + 14, 52 + accent, 38 + 14);
+                g.drawLine(width - 62, height - 38, width - 62 + accent, height - 38);
+                g.drawLine(width - 62, height - 38 - 14, width - 62 + accent, height - 38 - 14);
+                g.dispose();
+            }
+        };
+        cardsArea.setOpaque(false);
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        constraints.weighty = 1;
+        cardsArea.add(Box.createVerticalGlue(), constraints);
+        constraints.gridy = 1;
+        constraints.weighty = 0;
+        cardsArea.add(cards, constraints);
+
+        constraints.gridy = 2;
+        constraints.weighty = 1;
+        constraints.insets = new Insets(0, 0, 0, 0);
+        cardsArea.add(Box.createVerticalGlue(), constraints);
+        return cardsArea;
     }
 
     private JPanel portalCard(String title, String description, Color color,
@@ -120,22 +180,22 @@ public class Main {
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(BORDER),
                         BorderFactory.createMatteBorder(4, 0, 0, 0, color)),
-                BorderFactory.createEmptyBorder(26, 25, 25, 25)));
+                BorderFactory.createEmptyBorder(30, 30, 28, 30)));
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 22));
         titleLabel.setForeground(color);
         JLabel numberLabel = new JLabel(number, SwingConstants.CENTER);
         numberLabel.setOpaque(true);
         numberLabel.setBackground(new Color(color.getRed(), color.getGreen(), color.getBlue(), 22));
         numberLabel.setForeground(color);
         numberLabel.setFont(new Font("SansSerif", Font.BOLD, 17));
-        numberLabel.setPreferredSize(new Dimension(48, 48));
+        numberLabel.setPreferredSize(new Dimension(54, 54));
         JPanel cardHeading = new JPanel(new BorderLayout(12, 0));
         cardHeading.setOpaque(false);
         cardHeading.add(numberLabel, BorderLayout.WEST);
         cardHeading.add(titleLabel, BorderLayout.CENTER);
         JButton access = button("Ingresar", color);
-        access.setPreferredSize(new Dimension(120, 38));
+        access.setPreferredSize(new Dimension(132, 42));
         access.addActionListener(action);
         JPanel actionPanel = new JPanel(new BorderLayout());
         actionPanel.setOpaque(false);
@@ -182,39 +242,119 @@ public class Main {
     }
 
     private void showApplicantPortal() {
-        JFrame frame = window("Portal del aspirante", 900, 760);
+        JFrame frame = window("Portal del aspirante", 960, 620);
+        JPanel root = new JPanel(new BorderLayout(10, 10));
+        root.setBackground(SURFACE);
+        root.setBorder(BorderFactory.createEmptyBorder(18, 25, 18, 25));
+        root.add(header("PORTAL DEL ASPIRANTE", "Registro y actualización de solicitudes"),
+                BorderLayout.NORTH);
+        JPanel options = new JPanel(new GridLayout(1, 2, 20, 0));
+        options.setOpaque(false);
+        options.add(portalCard("Formulario de registro",
+                "Completa y envía una nueva solicitud de admisión con tus datos y documentos.",
+                PRIMARY, "01", "Nueva solicitud",
+                _ -> navigate(frame, () -> showApplicantForm(null))));
+        options.add(portalCard("Actualizar datos y Documentos",
+                "Busca tu solicitud existente por cédula y actualiza tu información o archivos adjuntos.",
+                new Color(48, 108, 119), "02", "Solicitud existente", _ -> {
+                    Applicant applicant = findApplicantForUpdate(frame);
+                    if (applicant != null) {
+                        navigate(frame, () -> showApplicantForm(applicant));
+                    }
+                }));
+        Dimension optionsSize = new Dimension(860, 320);
+        options.setPreferredSize(optionsSize);
+        options.setMaximumSize(optionsSize);
+        JPanel optionsArea = new JPanel(new GridBagLayout());
+        optionsArea.setOpaque(false);
+        optionsArea.add(options);
+        root.add(optionsArea, BorderLayout.CENTER);
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        footer.setOpaque(false);
+        JButton back = button("Volver", RED);
+        back.addActionListener(_ -> navigate(frame, this::showPortal));
+        footer.add(back);
+        root.add(footer, BorderLayout.SOUTH);
+        frame.setContentPane(root);
+        frame.setVisible(true);
+    }
+
+    private Applicant findApplicantForUpdate(JFrame parent) {
+        JTextField identity = new JTextField();
+        JTextField email = new JTextField();
+        JTextField registrationNumber = new JTextField();
+        JPanel credentials = new JPanel(new GridLayout(3, 2, 8, 8));
+        credentials.add(new JLabel("Cédula:"));
+        credentials.add(identity);
+        credentials.add(new JLabel("Correo electrónico:"));
+        credentials.add(email);
+        credentials.add(new JLabel("Número de inscripción:"));
+        credentials.add(registrationNumber);
+        int result = JOptionPane.showConfirmDialog(parent, credentials,
+                "Verificar solicitud para actualizar", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+        if (result != JOptionPane.OK_OPTION || identity.getText().isBlank()
+                || email.getText().isBlank() || registrationNumber.getText().isBlank()) {
+            return null;
+        }
+        try {
+            Applicant applicant = repository.find("")
+                    .stream()
+                    .filter(record -> record.identity().equalsIgnoreCase(identity.getText().trim())
+                            && record.email().equalsIgnoreCase(email.getText().trim())
+                            && Integer.toString(record.id()).equals(registrationNumber.getText().trim()))
+                    .findFirst()
+                    .orElse(null);
+            if (applicant == null) {
+                JOptionPane.showMessageDialog(parent,
+                        "Los datos ingresados no coinciden con una solicitud registrada.",
+                        "Verificación fallida", JOptionPane.WARNING_MESSAGE);
+                return null;
+            }
+            if (!AdmissionProcessing.PENDING.equals(applicant.status())) {
+                JOptionPane.showMessageDialog(parent,
+                        "Solo se pueden actualizar solicitudes que aún estén pendientes.",
+                        "Actualización no disponible", JOptionPane.WARNING_MESSAGE);
+                return null;
+            }
+            return applicant;
+        } catch (IOException ex) {
+            showError(parent, ex.getMessage());
+            return null;
+        }
+    }
+
+    private void showApplicantForm(Applicant existingApplicant) {
+        boolean updating = existingApplicant != null;
+        JFrame frame = window(updating ? "Actualizar datos y documentos" : "Formulario de registro",
+                900, 760);
         JPanel root = new JPanel(new BorderLayout(10, 10));
         root.setBackground(SURFACE);
         root.setBorder(BorderFactory.createEmptyBorder(18, 25, 18, 25));
         JPanel heading = new JPanel(new BorderLayout(0, 8));
         heading.setOpaque(false);
-        heading.add(header("PORTAL DEL ASPIRANTE", "Formulario de solicitud de admisión"),
+        heading.add(header(updating ? "ACTUALIZAR DATOS Y DOCUMENTOS" : "FORMULARIO DE REGISTRO",
+                updating ? "Revisa y actualiza tu solicitud pendiente"
+                        : "Completa los campos marcados con * para registrar tu solicitud"),
                 BorderLayout.CENTER);
-        JLabel formHint = new JLabel("  Completa los campos marcados con * para registrar tu solicitud.");
-        formHint.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        formHint.setForeground(new Color(78, 95, 112));
-        heading.add(formHint, BorderLayout.SOUTH);
         root.add(heading, BorderLayout.NORTH);
 
-        ApplicantForm form = new ApplicantForm(repository);
+        ApplicantForm form = new ApplicantForm(repository, existingApplicant);
         root.add(new JScrollPane(form.panel()), BorderLayout.CENTER);
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         actions.setOpaque(false);
-        JButton save = button("Enviar solicitud", GREEN);
+        JButton save = button(updating ? "Guardar actualización" : "Enviar solicitud", GREEN);
         JButton clear = button("Limpiar formulario", new Color(105, 119, 136));
         JButton query = button("Consultar estado", PRIMARY);
-        JButton logout = button("Cerrar sesión", RED);
+        JButton back = button("Volver al portal aspirante", RED);
         save.addActionListener(_ -> form.save());
         clear.addActionListener(_ -> form.clear());
         query.addActionListener(_ -> form.queryStatus());
-        logout.addActionListener(_ -> {
-            frame.dispose();
-            showPortal();
-        });
+        back.addActionListener(_ -> navigate(frame, this::showApplicantPortal));
         actions.add(save);
         actions.add(clear);
         actions.add(query);
-        actions.add(logout);
+        actions.add(back);
         root.add(actions, BorderLayout.SOUTH);
         frame.setContentPane(root);
         frame.setVisible(true);
@@ -239,10 +379,7 @@ public class Main {
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 6));
         bottom.setOpaque(false);
         JButton logout = button("Cerrar sesión", RED);
-        logout.addActionListener(_ -> {
-            frame.dispose();
-            showPortal();
-        });
+        logout.addActionListener(_ -> navigate(frame, this::showPortal));
         bottom.add(logout);
         root.add(bottom, BorderLayout.SOUTH);
         frame.setContentPane(root);
@@ -313,8 +450,18 @@ public class Main {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(width, height);
         frame.setMinimumSize(new Dimension(width, height));
+        if (nextWindowMaximized) {
+            frame.setExtendedState(frame.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+            nextWindowMaximized = false;
+        }
         frame.setLocationRelativeTo(null);
         return frame;
+    }
+
+    private void navigate(JFrame currentFrame, Runnable openNextScreen) {
+        nextWindowMaximized = (currentFrame.getExtendedState() & JFrame.MAXIMIZED_BOTH) != 0;
+        currentFrame.dispose();
+        openNextScreen.run();
     }
 
     private JButton button(String text, Color color) {
@@ -461,6 +608,7 @@ public class Main {
 
     private static final class ApplicantForm {
         private final ApplicantRepository repository;
+        private final Applicant existingApplicant;
         private final JPanel panel = new JPanel(new GridBagLayout());
         private boolean updatingAcademicOptions;
         private final JComboBox<String> identificationType =
@@ -491,8 +639,43 @@ public class Main {
         private final DateField birthDate = new DateField();
         private final JTextField photo = new JTextField();
         private final JLabel photoStatus = new JLabel("Ningún archivo subido");
+        private final JLabel photoPreview = new JLabel("", SwingConstants.CENTER) {
+            @Override
+            protected void paintComponent(java.awt.Graphics graphics) {
+                super.paintComponent(graphics);
+                if (getIcon() != null) {
+                    return;
+                }
+                java.awt.Graphics2D g = (java.awt.Graphics2D) graphics.create();
+                g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                int diameter = Math.min(104, Math.min(getWidth() - 24, getHeight() - 24));
+                if (diameter > 0) {
+                    int x = (getWidth() - diameter) / 2;
+                    int y = (getHeight() - diameter) / 2;
+                    g.setColor(new Color(25, 73, 126));
+                    g.fillOval(x, y, diameter, diameter);
+                    g.setColor(new Color(145, 151, 158));
+                    g.setStroke(new java.awt.BasicStroke(3));
+                    g.drawOval(x + 1, y + 1, diameter - 2, diameter - 2);
+                    int center = getWidth() / 2;
+                    int head = diameter / 5;
+                    g.fillOval(center - head / 2, y + diameter / 4, head, head);
+                    java.awt.geom.Path2D shoulders = new java.awt.geom.Path2D.Double();
+                    shoulders.moveTo(center - diameter * 0.27, y + diameter * 0.73);
+                    shoulders.curveTo(center - diameter * 0.25, y + diameter * 0.57,
+                            center + diameter * 0.25, y + diameter * 0.57,
+                            center + diameter * 0.27, y + diameter * 0.73);
+                    shoulders.closePath();
+                    g.fill(shoulders);
+                }
+                g.dispose();
+            }
+        };
         private final JTextField transcript = new JTextField();
         private final JTextField identificationDocument = new JTextField();
+        private final JLabel transcriptStatus = new JLabel("Ningún archivo subido");
+        private final JLabel identificationStatus = new JLabel("Ningún archivo subido");
         private final JComboBox<String> studentType = new JComboBox<>(
                 new String[]{"", "Primer ingreso", "Validación", "Cambio de facultad"});
         private final JComboBox<String> phoneType = new JComboBox<>(
@@ -522,8 +705,9 @@ public class Main {
         private final JComboBox<String> program = new JComboBox<>(new String[]{""});
         private final JComboBox<String> campus = new JComboBox<>(campuses());
 
-        private ApplicantForm(ApplicantRepository repository) {
+        private ApplicantForm(ApplicantRepository repository, Applicant existingApplicant) {
             this.repository = repository;
+            this.existingApplicant = existingApplicant;
             panel.setBackground(Color.WHITE);
             panel.setBorder(BorderFactory.createEmptyBorder(15, 12, 15, 12));
             for (java.awt.Component input : List.of(identificationType, nationality, identity, sex,
@@ -563,33 +747,14 @@ public class Main {
             });
             updateNationalities();
             addSection("Datos generales", 0);
-            addFieldTriple(panel, 1, "Tipo de identificación *", identificationType,
-                    "Cédula *", identity, "Nacionalidad *", nationality);
-            addFieldTriple(panel, 2, "Primer y segundo nombre *", names,
-                    "Primer y segundo apellido *", surnames, "Fecha de nacimiento *", birthDate);
-            addPhotoField();
+            addGeneralInformationFields();
             addSection("Datos de contacto", 4);
-            addSubsection("Números telefónicos", 5);
-            addFieldPair(panel, 6, "Tipo de contacto *", phoneType,
-                    "Número de teléfono *", phone);
-            addFieldPair(panel, 7, "Otro tipo de contacto *", emergencyPhoneType,
-                    "Número de emergencia *", emergencyPhone);
+            addContactSubsections();
 
-            addSubsection("Correo electrónico", 8);
-            addFieldPair(panel, 9, "Tipo de correo *", emailType,
-                    "Correo electrónico *", email);
-            addFieldPair(panel, 10, "Otro tipo de correo *", secondaryEmailType,
-                    "Correo alternativo *", secondaryEmail);
-            addSubsection("Dirección", 11);
-            addFieldTriple(panel, 12, "Tipo de dirección *", addressType,
-                    "Provincia *", province, "Distrito *", district);
-            addFieldPair(panel, 13, "Corregimiento *", corregimiento,
-                    "Barrio *", neighborhood);
-
-            addSection("Datos académicos", 15);
-            addFieldTriple(panel, 16, "Tipo de colegio *", collegeType,
+            addSection("Datos académicos", 7);
+            addFieldTriple(panel, 8, "Tipo de colegio *", collegeType,
                     "Colegio *", school, "Bachiller *", baccalaureate);
-            addFieldTriple(panel, 17, "Sede donde estudiará *", campus,
+            addFieldTriple(panel, 9, "Sede donde estudiará *", campus,
                     "Facultad *", faculty, "Escuela *", schoolUnit);
             JLabel admissionNotice = new JLabel("");
             admissionNotice.setForeground(new Color(75, 88, 103));
@@ -602,7 +767,7 @@ public class Main {
                     BorderFactory.createEmptyBorder(8, 10, 8, 10)));
             admissionBox.setPreferredSize(new Dimension(100, 48));
             admissionBox.add(admissionNotice, BorderLayout.CENTER);
-            addFieldPair(panel, 18, "Carrera *", program,
+            addFieldPair(panel, 10, "Carrera *", program,
                     "Admisión", admissionBox);
             for (JComboBox<String> field : List.of(collegeType, school, baccalaureate, campus,
                     faculty, schoolUnit, program)) {
@@ -610,27 +775,202 @@ public class Main {
             }
             GridBagConstraints fill = new GridBagConstraints();
             fill.gridx = 0;
-            addSection("Documentos requeridos", 19);
+            addSection("Documentos requeridos", 11);
             addRequiredDocuments();
-            fill.gridy = 21;
+            fill.gridy = 13;
             fill.gridwidth = 4;
             fill.weighty = 1;
             fill.fill = GridBagConstraints.VERTICAL;
             panel.add(new JPanel(), fill);
+            if (existingApplicant != null) {
+                loadApplicant(existingApplicant);
+            }
         }
 
         private void addSection(String text, int row) {
             JLabel label = new JLabel(text);
             label.setForeground(new Color(28, 71, 110));
             label.setFont(new Font("SansSerif", Font.BOLD, 17));
-            GridBagConstraints constraint = new GridBagConstraints();
-            constraint.gridx = 0;
-            constraint.gridy = row;
-            constraint.gridwidth = 4;
-            constraint.anchor = GridBagConstraints.WEST;
-            constraint.fill = GridBagConstraints.HORIZONTAL;
-            constraint.insets = new Insets(18, 4, 6, 4);
-            panel.add(label, constraint);
+            JPanel heading = sectionHeading(label);
+            GridBagConstraints constraints = new GridBagConstraints();
+            constraints.gridx = 0;
+            constraints.gridy = row;
+            constraints.gridwidth = 4;
+            constraints.fill = GridBagConstraints.HORIZONTAL;
+            constraints.insets = new Insets(18, 4, 6, 4);
+            panel.add(heading, constraints);
+        }
+
+        private void addGeneralInformationFields() {
+            JPanel generalFields = new JPanel(new GridBagLayout());
+            generalFields.setOpaque(false);
+            addGeneralFieldTriple(generalFields, 0, "Tipo de identificación *", identificationType,
+                    "Cédula *", identity, "Nacionalidad *", nationality);
+            addGeneralFieldTriple(generalFields, 1, "Primer y segundo nombre *", names,
+                    "Primer y segundo apellido *", surnames, "Fecha de nacimiento *", birthDate);
+
+            JPanel generalDetails = new JPanel(new GridLayout(1, 3, 12, 0));
+            generalDetails.setOpaque(false);
+            addStackedField(generalDetails, "Género *", sex);
+            addStackedField(generalDetails, "Foto tamaño carnet *", photoChooser());
+            addStackedField(generalDetails, "Tipo de estudiante *", studentType);
+            GridBagConstraints detailConstraints = new GridBagConstraints();
+            detailConstraints.gridx = 0;
+            detailConstraints.gridy = 2;
+            detailConstraints.gridwidth = 3;
+            detailConstraints.weightx = 1;
+            detailConstraints.fill = GridBagConstraints.HORIZONTAL;
+            detailConstraints.insets = new Insets(6, 4, 6, 4);
+            generalFields.add(generalDetails, detailConstraints);
+
+            photoPreview.setPreferredSize(new Dimension(125, 195));
+            photoPreview.setMinimumSize(new Dimension(115, 160));
+            photoPreview.setForeground(new Color(105, 119, 136));
+            photoPreview.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            photoPreview.setBorder(BorderFactory.createLineBorder(BORDER));
+            photoPreview.setOpaque(true);
+            photoPreview.setBackground(Color.WHITE);
+            GridBagConstraints photoConstraints = new GridBagConstraints();
+            photoConstraints.gridx = 3;
+            photoConstraints.gridy = 0;
+            photoConstraints.gridheight = 3;
+            photoConstraints.weightx = 0.4;
+            photoConstraints.weighty = 1;
+            photoConstraints.fill = GridBagConstraints.BOTH;
+            photoConstraints.insets = new Insets(6, 8, 6, 4);
+            generalFields.add(photoPreview, photoConstraints);
+
+            GridBagConstraints constraints = new GridBagConstraints();
+            constraints.gridx = 0;
+            constraints.gridy = 1;
+            constraints.gridwidth = 4;
+            constraints.weightx = 1;
+            constraints.fill = GridBagConstraints.HORIZONTAL;
+            constraints.insets = new Insets(0, 0, 0, 0);
+            panel.add(generalFields, constraints);
+        }
+
+        private void addGeneralFieldTriple(JPanel container, int row,
+                                           String firstLabel, java.awt.Component firstField,
+                                           String secondLabel, java.awt.Component secondField,
+                                           String thirdLabel, java.awt.Component thirdField) {
+            JPanel fields = new JPanel(new GridLayout(1, 3, 12, 0));
+            fields.setOpaque(false);
+            addStackedField(fields, firstLabel, firstField);
+            addStackedField(fields, secondLabel, secondField);
+            addStackedField(fields, thirdLabel, thirdField);
+            GridBagConstraints constraints = new GridBagConstraints();
+            constraints.gridx = 0;
+            constraints.gridy = row;
+            constraints.gridwidth = 3;
+            constraints.weightx = 1;
+            constraints.fill = GridBagConstraints.HORIZONTAL;
+            constraints.insets = new Insets(6, 4, 6, 4);
+            container.add(fields, constraints);
+        }
+
+        private JPanel photoChooser() {
+            photo.setEditable(false);
+            JPanel chooser = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+            chooser.setOpaque(false);
+            JButton select = new JButton("Adjuntar foto");
+            select.addActionListener(_ -> {
+                chooseFile(photo, "Selecciona la foto tamaño carnet",
+                        "jpg", "jpeg", "png", "gif", "pdf");
+                photoStatus.setText(value(photo).isEmpty() ? "Ningún archivo subido" : "");
+                updatePhotoPreview();
+            });
+            chooser.add(select);
+            chooser.add(photoStatus);
+            return chooser;
+        }
+
+        private JPanel sectionHeading(JLabel label) {
+            JPanel heading = new JPanel(new BorderLayout(0, 3));
+            heading.setOpaque(false);
+            heading.add(label, BorderLayout.NORTH);
+            JSeparator divider = new JSeparator(SwingConstants.HORIZONTAL);
+            divider.setForeground(new Color(25, 73, 126));
+            divider.setBackground(new Color(25, 73, 126));
+            heading.add(divider, BorderLayout.SOUTH);
+            return heading;
+        }
+
+        private void addContactSubsections() {
+            JPanel rows = new JPanel(new GridBagLayout());
+            rows.setOpaque(false);
+            addContactRow(rows, 0,
+                    contactColumnHeading("Números telefónicos"),
+                    contactColumnHeading("Correo electrónico"),
+                    contactColumnHeading("Dirección"));
+            addContactRow(rows, 1,
+                    contactField("Tipo de contacto *", phoneType),
+                    contactField("Tipo de correo *", emailType),
+                    contactField("Tipo de dirección *", addressType));
+            addContactRow(rows, 2,
+                    contactField("Número de teléfono *", phone),
+                    contactField("Correo electrónico *", email),
+                    contactField("Provincia *", province));
+            addContactRow(rows, 3,
+                    contactField("Otro tipo de contacto *", emergencyPhoneType),
+                    contactField("Otro tipo de correo *", secondaryEmailType),
+                    contactField("Distrito *", district));
+            addContactRow(rows, 4,
+                    contactField("Número de emergencia *", emergencyPhone),
+                    contactField("Correo alternativo *", secondaryEmail),
+                    contactField("Corregimiento *", corregimiento));
+            addContactRow(rows, 5, emptyContactCell(), emptyContactCell(),
+                    contactField("Barrio *", neighborhood));
+
+            GridBagConstraints constraints = new GridBagConstraints();
+            constraints.gridx = 0;
+            constraints.gridy = 5;
+            constraints.gridwidth = 4;
+            constraints.weightx = 1;
+            constraints.fill = GridBagConstraints.HORIZONTAL;
+            constraints.insets = new Insets(4, 4, 8, 4);
+            panel.add(rows, constraints);
+        }
+
+        private void addContactRow(JPanel rows, int row, java.awt.Component first,
+                                   java.awt.Component second, java.awt.Component third) {
+            JPanel cells = new JPanel(new GridLayout(1, 3, 24, 0));
+            cells.setOpaque(false);
+            cells.add(first);
+            cells.add(second);
+            cells.add(third);
+            GridBagConstraints constraints = new GridBagConstraints();
+            constraints.gridx = 0;
+            constraints.gridy = row;
+            constraints.weightx = 1;
+            constraints.fill = GridBagConstraints.HORIZONTAL;
+            constraints.insets = row == 0
+                    ? new Insets(0, 2, 3, 2) : new Insets(4, 2, 4, 2);
+            rows.add(cells, constraints);
+        }
+
+        private JPanel contactColumnHeading(String title) {
+            JLabel label = new JLabel(title);
+            label.setForeground(new Color(28, 71, 110));
+            label.setFont(new Font("SansSerif", Font.BOLD, 13));
+            return sectionHeading(label);
+        }
+
+        private JPanel contactField(String label, java.awt.Component field) {
+            JPanel container = new JPanel(new BorderLayout(0, 3));
+            container.setOpaque(false);
+            JLabel fieldLabel = new JLabel(label);
+            fieldLabel.setForeground(new Color(62, 76, 92));
+            fieldLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+            container.add(fieldLabel, BorderLayout.NORTH);
+            container.add(field, BorderLayout.CENTER);
+            return container;
+        }
+
+        private JPanel emptyContactCell() {
+            JPanel empty = new JPanel();
+            empty.setOpaque(false);
+            return empty;
         }
 
         private void updateAdmissionNotice(JLabel notice) {
@@ -646,20 +986,6 @@ public class Main {
                     : "");
         }
 
-        private void addSubsection(String text, int row) {
-            JLabel label = new JLabel(text);
-            label.setForeground(new Color(51, 116, 133));
-            label.setFont(new Font("SansSerif", Font.BOLD, 13));
-            GridBagConstraints constraint = new GridBagConstraints();
-            constraint.gridx = 0;
-            constraint.gridy = row;
-            constraint.gridwidth = 4;
-            constraint.anchor = GridBagConstraints.WEST;
-            constraint.fill = GridBagConstraints.HORIZONTAL;
-            constraint.insets = new Insets(11, 4, 4, 4);
-            panel.add(label, constraint);
-        }
-
         private void styleInput(java.awt.Component input) {
             input.setFont(new Font("SansSerif", Font.PLAIN, 13));
             input.setForeground(new Color(39, 51, 65));
@@ -673,38 +999,61 @@ public class Main {
             }
         }
 
-        private void addPhotoField() {
-            photo.setEditable(false);
-            JPanel chooser = new JPanel(new BorderLayout(6, 0));
-            JButton select = new JButton("Adjuntar foto");
-            select.addActionListener(_ -> {
-                chooseFile(photo, "Selecciona la foto tamaño carnet",
-                        "jpg", "jpeg", "png", "gif", "pdf");
-                photoStatus.setText(value(photo).isEmpty() ? "Ningún archivo subido" : "");
-            });
-            chooser.add(select, BorderLayout.WEST);
-            chooser.add(photoStatus, BorderLayout.CENTER);
-            addFieldTriple(panel, 3, "Género *", sex, "Foto tamaño carnet *", chooser,
-                    "Tipo de estudiante *", studentType);
+        private void updatePhotoPreview() {
+            photoPreview.setIcon(null);
+            photoPreview.setText("");
+            String filePath = value(photo);
+            if (filePath.isEmpty()) {
+                return;
+            }
+            Path path = Path.of(filePath);
+            String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+            if (fileName.endsWith(".pdf")) {
+                photoPreview.setText("<html><center>Vista previa<br>no disponible<br>para PDF</center></html>");
+                return;
+            }
+            try {
+                java.awt.image.BufferedImage image = ImageIO.read(path.toFile());
+                if (image == null) {
+                    photo.setText("");
+                    photoStatus.setText("Ningún archivo subido");
+                    JOptionPane.showMessageDialog(panel, "No se pudo leer la imagen seleccionada.",
+                            "Imagen inválida", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                double scale = Math.min(113.0 / image.getWidth(), 183.0 / image.getHeight());
+                int width = Math.max(1, (int) (image.getWidth() * scale));
+                int height = Math.max(1, (int) (image.getHeight() * scale));
+                photoPreview.setText("");
+                photoPreview.setIcon(new ImageIcon(
+                        image.getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH)));
+            } catch (IOException ex) {
+                showError(panel, ex.getMessage());
+                photo.setText("");
+                photoStatus.setText("Ningún archivo subido");
+            }
         }
 
         private void addRequiredDocuments() {
             String transcriptLabel = "Boletín o créditos de décimo y undécimo * (PDF, máximo 1 MB)";
             String identityLabel = "Cédula o cédula juvenil * (JPG, PNG, GIF o PDF; máximo 1 MB)";
-            addFieldPair(panel, 20, transcriptLabel,
-                    documentChooser(transcript, transcriptLabel, "Adjuntar boletín", "pdf"),
-                    identityLabel, documentChooser(identificationDocument, identityLabel,
+            addFieldPair(panel, 12, transcriptLabel,
+                    documentChooser(transcript, transcriptStatus, transcriptLabel, "Adjuntar boletín", "pdf"),
+                    identityLabel, documentChooser(identificationDocument, identificationStatus, identityLabel,
                             "Adjuntar cédula", "jpg", "jpeg", "png", "gif", "pdf"));
         }
 
-        private JPanel documentChooser(JTextField target, String description, String buttonText,
-                                       String... extensions) {
+        private JPanel documentChooser(JTextField target, JLabel status, String description,
+                                       String buttonText, String... extensions) {
             target.setEditable(false);
             JPanel chooser = new JPanel(new BorderLayout(6, 0));
             JButton select = new JButton(buttonText);
-            select.addActionListener(_ -> chooseFile(target, description, extensions));
-            chooser.add(target, BorderLayout.CENTER);
-            chooser.add(select, BorderLayout.EAST);
+            select.addActionListener(_ -> {
+                chooseFile(target, description, extensions);
+                status.setText(value(target).isEmpty() ? "Ningún archivo subido" : "");
+            });
+            chooser.add(select, BorderLayout.WEST);
+            chooser.add(status, BorderLayout.CENTER);
             return chooser;
         }
 
@@ -754,6 +1103,66 @@ public class Main {
             nationality.setSelectedIndex(0);
         }
 
+        private void loadApplicant(Applicant applicant) {
+            identificationType.setSelectedItem(applicant.identificationType());
+            nationality.setSelectedItem(applicant.nationality());
+            identity.setText(applicant.identity());
+            sex.setSelectedItem(applicant.sex());
+            names.setText(joinNames(applicant.firstName(), applicant.secondName()));
+            surnames.setText(joinNames(applicant.firstSurname(), applicant.secondSurname()));
+            birthDate.setText(applicant.birthDate());
+            studentType.setSelectedItem(applicant.studentType());
+            photo.setText(applicant.photo());
+            photoStatus.setText(existingFileStatus(applicant.photo()));
+            updatePhotoPreview();
+
+            phoneType.setSelectedItem(applicant.phoneType());
+            phone.setText(applicant.phone());
+            emergencyPhoneType.setSelectedItem(applicant.emergencyPhoneType());
+            emergencyPhone.setText(applicant.emergencyPhone());
+            emailType.setSelectedItem(applicant.emailType());
+            email.setText(applicant.email());
+            secondaryEmailType.setSelectedItem(applicant.secondaryEmailType());
+            secondaryEmail.setText(applicant.secondaryEmail());
+            addressType.setSelectedItem(applicant.addressType());
+            province.setSelectedItem(applicant.province());
+            updateDistricts();
+            district.setSelectedItem(applicant.district());
+            updateCorregimientos();
+            corregimiento.setSelectedItem(applicant.corregimiento());
+            neighborhood.setText(applicant.neighborhood());
+
+            collegeType.setSelectedItem(applicant.collegeType());
+            updateSchools();
+            school.setSelectedItem(applicant.school());
+            updateBaccalaureates();
+            baccalaureate.setSelectedItem(applicant.baccalaureate());
+            campus.setSelectedItem(applicant.campus());
+            updateFaculties();
+            faculty.setSelectedItem(applicant.faculty());
+            updateSchoolUnits();
+            schoolUnit.setSelectedItem(applicant.schoolUnit());
+            updatePrograms();
+            program.setSelectedItem(applicant.program());
+
+            transcript.setText(applicant.transcript());
+            transcriptStatus.setText(existingFileStatus(applicant.transcript()));
+            identificationDocument.setText(applicant.identificationDocument());
+            identificationStatus.setText(existingFileStatus(applicant.identificationDocument()));
+        }
+
+        private static String joinNames(String first, String second) {
+            return second.isBlank() ? first : first + " " + second;
+        }
+
+        private static String existingFileStatus(String filePath) {
+            if (filePath.isBlank()) {
+                return "Ningún archivo subido";
+            }
+            Path path = Path.of(filePath);
+            return "Archivo actual: " + path.getFileName();
+        }
+
         private void save() {
             if (required().stream().anyMatch(String::isBlank)) {
                 JOptionPane.showMessageDialog(panel, "Completa todos los campos obligatorios.",
@@ -780,7 +1189,7 @@ public class Main {
                 return;
             }
             try {
-                if (repository.identityExists(value(identity))) {
+                if (existingApplicant == null && repository.identityExists(value(identity))) {
                     JOptionPane.showMessageDialog(panel,
                             "Ya existe una solicitud registrada con esta cédula.",
                             "Solicitud duplicada", JOptionPane.WARNING_MESSAGE);
@@ -790,30 +1199,45 @@ public class Main {
                 showError(panel, ex.getMessage());
                 return;
             }
-            Applicant applicant = new Applicant(0, selected(identificationType),
-                    selected(nationality), value(identity), selected(sex),
-                    value(names), "", value(surnames), "",
-                    value(birthDate), value(photo), selected(studentType), value(email), value(phone),
-                    selected(school), "", "", selected(program),
-                    selected(campus), "Pendiente", LocalDate.now().toString(),
-                    selected(phoneType), selected(emergencyPhoneType), value(emergencyPhone),
-                    selected(emailType), selected(secondaryEmailType), value(secondaryEmail),
-                    selected(addressType), selected(province),
-                    selected(district), selected(corregimiento),
-                    value(neighborhood), selected(collegeType), selected(baccalaureate),
-                    selected(faculty), selected(schoolUnit), value(transcript),
-                    value(identificationDocument));
+            Applicant applicant = buildApplicant();
             try {
-                repository.insert(applicant);
-                JOptionPane.showMessageDialog(panel, "Solicitud enviada. Tu estado inicial es: Pendiente.",
-                        "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
+                if (existingApplicant == null) {
+                    repository.insert(applicant);
+                    JOptionPane.showMessageDialog(panel, "Solicitud enviada. Tu estado inicial es: Pendiente.",
+                            "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    repository.updateApplicant(applicant);
+                    JOptionPane.showMessageDialog(panel, "Los datos y documentos se actualizaron correctamente.",
+                            "Actualización exitosa", JOptionPane.INFORMATION_MESSAGE);
+                }
                 clear();
             } catch (IllegalStateException ex) {
                 JOptionPane.showMessageDialog(panel, ex.getMessage(),
-                        "Solicitud duplicada", JOptionPane.WARNING_MESSAGE);
+                        existingApplicant == null ? "Solicitud duplicada" : "Actualización no disponible",
+                        JOptionPane.WARNING_MESSAGE);
             } catch (IOException ex) {
                 showError(panel, ex.getMessage());
             }
+        }
+
+        private Applicant buildApplicant() {
+            int id = existingApplicant == null ? 0 : existingApplicant.id();
+            String status = existingApplicant == null
+                    ? AdmissionProcessing.PENDING : existingApplicant.status();
+            String applicationDate = existingApplicant == null
+                    ? LocalDate.now().toString() : existingApplicant.date();
+            return new Applicant(id, selected(identificationType), selected(nationality),
+                    value(identity), selected(sex), value(names), "", value(surnames), "",
+                    value(birthDate), value(photo), selected(studentType), value(email), value(phone),
+                    selected(school), existingApplicant == null ? "" : existingApplicant.schoolLocation(),
+                    existingApplicant == null ? "" : existingApplicant.credits(), selected(program),
+                    selected(campus), status, applicationDate,
+                    selected(phoneType), selected(emergencyPhoneType), value(emergencyPhone),
+                    selected(emailType), selected(secondaryEmailType), value(secondaryEmail),
+                    selected(addressType), selected(province), selected(district), selected(corregimiento),
+                    value(neighborhood), selected(collegeType), selected(baccalaureate),
+                    selected(faculty), selected(schoolUnit), value(transcript),
+                    value(identificationDocument));
         }
 
         private void queryStatus() {
@@ -934,6 +1358,10 @@ public class Main {
                 field.setText("");
             }
             photoStatus.setText("Ningún archivo subido");
+            photoPreview.setIcon(null);
+            photoPreview.setText("");
+            transcriptStatus.setText("Ningún archivo subido");
+            identificationStatus.setText("Ningún archivo subido");
             birthDate.reset();
             for (JComboBox<String> combo : List.of(identificationType, nationality, sex, studentType,
                     phoneType, emergencyPhoneType, emailType, secondaryEmailType, addressType, province,
@@ -1388,6 +1816,10 @@ public class Main {
             }
         };
         private final JTable table = new JTable(model);
+        private final JLabel pendingCount = new JLabel("0", SwingConstants.CENTER);
+        private final JLabel inProgressCount = new JLabel("0", SwingConstants.CENTER);
+        private final JLabel admittedCount = new JLabel("0", SwingConstants.CENTER);
+        private final JLabel rejectedCount = new JLabel("0", SwingConstants.CENTER);
         private int selectedId = -1;
 
         private AdminPanel(ApplicantRepository repository) {
@@ -1423,26 +1855,57 @@ public class Main {
             search.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(BORDER),
                     BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+            JComboBox<String> statusFilter = new JComboBox<>(new String[]{
+                    "Todos los estados", AdmissionProcessing.PENDING, AdmissionProcessing.IN_PROGRESS,
+                    AdmissionProcessing.ADMITTED, AdmissionProcessing.REJECTED
+            });
             JButton find = buttonStatic("Buscar", PRIMARY);
+            JButton refreshButton = buttonStatic("Actualizar lista", new Color(105, 119, 136));
+            JButton details = buttonStatic("Ver expediente", new Color(85, 105, 127));
             JButton status = buttonStatic("Procesar solicitud", new Color(48, 108, 119));
-            find.addActionListener(_ -> refresh(search.getText()));
-            search.addActionListener(_ -> refresh(search.getText()));
+            JButton delete = buttonStatic("Eliminar solicitud", RED);
+            find.addActionListener(_ -> refresh(search.getText(), selectedStatus(statusFilter)));
+            search.addActionListener(_ -> refresh(search.getText(), selectedStatus(statusFilter)));
+            statusFilter.addActionListener(_ -> refresh(search.getText(), selectedStatus(statusFilter)));
+            refreshButton.addActionListener(_ -> refresh(search.getText(), selectedStatus(statusFilter)));
+            details.addActionListener(_ -> showSelectedApplicant());
             status.addActionListener(_ -> updateStatus());
+            delete.addActionListener(_ -> deleteSelectedApplicant());
+            details.setEnabled(false);
+            status.setEnabled(false);
+            delete.setEnabled(false);
+            table.getSelectionModel().addListSelectionListener(event -> {
+                boolean selected = !event.getValueIsAdjusting() && table.getSelectedRow() >= 0;
+                details.setEnabled(selected);
+                status.setEnabled(selected);
+                delete.setEnabled(selected);
+            });
             JPanel toolbar = new JPanel(new BorderLayout(8, 0));
             toolbar.setOpaque(false);
-            toolbar.add(search, BorderLayout.CENTER);
+            JPanel searchControls = new JPanel(new BorderLayout(8, 0));
+            searchControls.setOpaque(false);
+            searchControls.add(search, BorderLayout.CENTER);
+            searchControls.add(statusFilter, BorderLayout.EAST);
+            toolbar.add(searchControls, BorderLayout.CENTER);
             JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
             actions.setOpaque(false);
             actions.add(find);
+            actions.add(refreshButton);
+            actions.add(details);
             actions.add(status);
+            actions.add(delete);
             toolbar.add(actions, BorderLayout.EAST);
-            JPanel header = new JPanel(new BorderLayout(0, 8));
+            JPanel header = new JPanel(new BorderLayout(0, 10));
             header.setOpaque(false);
             JLabel workflow = new JLabel("Flujo de revisión: Pendiente  →  En proceso  →  Admitido / Rechazado");
             workflow.setForeground(new Color(83, 101, 119));
             workflow.setFont(new Font("SansSerif", Font.PLAIN, 12));
-            header.add(toolbar, BorderLayout.CENTER);
-            header.add(workflow, BorderLayout.SOUTH);
+            header.add(statusSummary(), BorderLayout.NORTH);
+            JPanel controls = new JPanel(new BorderLayout(0, 8));
+            controls.setOpaque(false);
+            controls.add(toolbar, BorderLayout.CENTER);
+            controls.add(workflow, BorderLayout.SOUTH);
+            header.add(controls, BorderLayout.SOUTH);
             root.add(header, BorderLayout.NORTH);
             JScrollPane scrollPane = new JScrollPane(table);
             scrollPane.setBorder(BorderFactory.createLineBorder(BORDER));
@@ -1450,22 +1913,191 @@ public class Main {
             return root;
         }
 
-        private void refresh() {
-            refresh("");
+        private JPanel statusSummary() {
+            JPanel summary = new JPanel(new GridLayout(1, 4, 10, 0));
+            summary.setOpaque(false);
+            summary.add(statusCard("Pendientes", pendingCount, new Color(105, 119, 136)));
+            summary.add(statusCard("En proceso", inProgressCount, new Color(48, 108, 119)));
+            summary.add(statusCard("Admitidas", admittedCount, GREEN));
+            summary.add(statusCard("Rechazadas", rejectedCount, RED));
+            return summary;
         }
 
-        private void refresh(String query) {
+        private JPanel statusCard(String title, JLabel count, Color accent) {
+            JPanel card = new JPanel(new BorderLayout(8, 0));
+            card.setBackground(Color.WHITE);
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 3, 0, 0, accent),
+                    BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(BORDER),
+                            BorderFactory.createEmptyBorder(8, 10, 8, 10))));
+            JLabel titleLabel = new JLabel(title);
+            titleLabel.setForeground(new Color(83, 101, 119));
+            titleLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            count.setForeground(accent);
+            count.setFont(new Font("SansSerif", Font.BOLD, 20));
+            card.add(titleLabel, BorderLayout.CENTER);
+            card.add(count, BorderLayout.EAST);
+            return card;
+        }
+
+        private void refresh() {
+            refresh("", "Todos los estados");
+        }
+
+        private static String selectedStatus(JComboBox<String> statusFilter) {
+            Object selected = statusFilter.getSelectedItem();
+            return selected == null ? "Todos los estados" : selected.toString();
+        }
+
+        private void refresh(String query, String statusFilter) {
             try {
+                selectedId = -1;
+                table.clearSelection();
                 model.setRowCount(0);
-                for (Applicant applicant : repository.find(query)) {
+                List<Applicant> applicants = repository.find("");
+                int pending = 0;
+                int inProgress = 0;
+                int admitted = 0;
+                int rejected = 0;
+                for (Applicant applicant : applicants) {
+                    switch (applicant.status()) {
+                        case AdmissionProcessing.PENDING -> pending++;
+                        case AdmissionProcessing.IN_PROGRESS -> inProgress++;
+                        case AdmissionProcessing.ADMITTED -> admitted++;
+                        case AdmissionProcessing.REJECTED -> rejected++;
+                        default -> {
+                        }
+                    }
+                    if (!matchesQuery(applicant, query)
+                            || (!"Todos los estados".equals(statusFilter)
+                            && !statusFilter.equals(applicant.status()))) {
+                        continue;
+                    }
                     model.addRow(new Object[]{applicant.id(), applicant.identity(),
                             applicant.firstName() + " " + applicant.firstSurname(), applicant.school(),
                             applicant.program(), applicant.campus(), applicant.status(), applicant.email(),
                             applicant.phone()});
                 }
+                pendingCount.setText(Integer.toString(pending));
+                inProgressCount.setText(Integer.toString(inProgress));
+                admittedCount.setText(Integer.toString(admitted));
+                rejectedCount.setText(Integer.toString(rejected));
             } catch (IOException ex) {
                 showError(table, ex.getMessage());
             }
+        }
+
+        private static boolean matchesQuery(Applicant applicant, String query) {
+            if (query == null || query.isBlank()) {
+                return true;
+            }
+            String searchable = (applicant.identity() + " " + applicant.firstName() + " "
+                    + applicant.firstSurname() + " " + applicant.school() + " "
+                    + applicant.program() + " " + applicant.campus() + " "
+                    + applicant.email()).toLowerCase(Locale.ROOT);
+            return searchable.contains(query.trim().toLowerCase(Locale.ROOT));
+        }
+
+        private void deleteSelectedApplicant() {
+            if (selectedId < 0) {
+                JOptionPane.showMessageDialog(table, "Selecciona una solicitud para eliminarla.",
+                        "Sin selección", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            try {
+                Applicant applicant = repository.findById(selectedId).orElse(null);
+                if (applicant == null) {
+                    JOptionPane.showMessageDialog(table, "La solicitud ya no está disponible.",
+                            "Solicitud no encontrada", JOptionPane.WARNING_MESSAGE);
+                    refresh();
+                    return;
+                }
+                if (!AdmissionProcessing.PENDING.equals(applicant.status())) {
+                    JOptionPane.showMessageDialog(table,
+                            "Solo se pueden eliminar solicitudes que todavía estén pendientes.",
+                            "Eliminación no permitida", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                String applicantName = applicant.firstName() + " " + applicant.firstSurname();
+                int confirmation = JOptionPane.showConfirmDialog(table,
+                        "¿Eliminar la solicitud pendiente de " + applicantName + " (cédula "
+                                + applicant.identity() + ")?\nEsta acción no se puede deshacer.",
+                        "Confirmar eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (confirmation == JOptionPane.YES_OPTION) {
+                    repository.deletePending(selectedId);
+                    refresh();
+                    JOptionPane.showMessageDialog(table, "La solicitud fue eliminada.",
+                            "Solicitud eliminada", JOptionPane.INFORMATION_MESSAGE);
+                }
+            } catch (IOException | IllegalStateException ex) {
+                showError(table, ex.getMessage());
+            }
+        }
+
+        private void showSelectedApplicant() {
+            if (selectedId < 0) {
+                JOptionPane.showMessageDialog(table, "Selecciona una solicitud para ver su expediente.",
+                        "Sin selección", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            try {
+                Applicant applicant = repository.findById(selectedId).orElse(null);
+                if (applicant == null) {
+                    JOptionPane.showMessageDialog(table, "La solicitud ya no está disponible.",
+                            "Solicitud no encontrada", JOptionPane.WARNING_MESSAGE);
+                    refresh();
+                    return;
+                }
+                JTextArea details = new JTextArea(applicantDetails(applicant));
+                details.setEditable(false);
+                details.setCaretPosition(0);
+                details.setFont(new Font("SansSerif", Font.PLAIN, 13));
+                details.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+                JScrollPane scrollPane = new JScrollPane(details);
+                scrollPane.setPreferredSize(new Dimension(640, 560));
+                JOptionPane.showMessageDialog(table, scrollPane,
+                        "Expediente de " + applicant.firstName() + " " + applicant.firstSurname(),
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException ex) {
+                showError(table, ex.getMessage());
+            }
+        }
+
+        private static String applicantDetails(Applicant a) {
+            return "DATOS GENERALES\n"
+                    + "ID de solicitud: " + a.id() + "\n"
+                    + "Tipo de identificación: " + a.identificationType() + "\n"
+                    + "Cédula: " + a.identity() + "\n"
+                    + "Nacionalidad: " + a.nationality() + "\n"
+                    + "Género: " + a.sex() + "\n"
+                    + "Nombre: " + a.firstName() + " " + a.secondName() + "\n"
+                    + "Apellido: " + a.firstSurname() + " " + a.secondSurname() + "\n"
+                    + "Fecha de nacimiento: " + a.birthDate() + "\n"
+                    + "Tipo de estudiante: " + a.studentType() + "\n"
+                    + "Estado: " + a.status() + "\n"
+                    + "Fecha de solicitud: " + a.date() + "\n\n"
+                    + "DATOS DE CONTACTO\n"
+                    + "Teléfono (" + a.phoneType() + "): " + a.phone() + "\n"
+                    + "Teléfono de emergencia (" + a.emergencyPhoneType() + "): "
+                    + a.emergencyPhone() + "\n"
+                    + "Correo (" + a.emailType() + "): " + a.email() + "\n"
+                    + "Correo alternativo (" + a.secondaryEmailType() + "): "
+                    + a.secondaryEmail() + "\n"
+                    + "Dirección (" + a.addressType() + "): " + a.neighborhood() + ", "
+                    + a.corregimiento() + ", " + a.district() + ", " + a.province() + "\n\n"
+                    + "DATOS ACADÉMICOS\n"
+                    + "Tipo de colegio: " + a.collegeType() + "\n"
+                    + "Colegio: " + a.school() + "\n"
+                    + "Bachiller: " + a.baccalaureate() + "\n"
+                    + "Sede: " + a.campus() + "\n"
+                    + "Facultad: " + a.faculty() + "\n"
+                    + "Escuela: " + a.schoolUnit() + "\n"
+                    + "Carrera: " + a.program() + "\n\n"
+                    + "DOCUMENTOS ADJUNTOS\n"
+                    + "Foto tamaño carnet: " + a.photo() + "\n"
+                    + "Boletín o créditos: " + a.transcript() + "\n"
+                    + "Cédula o cédula juvenil: " + a.identificationDocument();
         }
 
         private void updateStatus() {
@@ -1577,6 +2209,44 @@ public class Main {
                         applicant.schoolUnit(), applicant.transcript(), applicant.identificationDocument())));
                 writer.newLine();
             }
+        }
+
+        private void updateApplicant(Applicant updatedApplicant) throws IOException {
+            List<Applicant> applicants = find("");
+            boolean updated = false;
+            for (int i = 0; i < applicants.size(); i++) {
+                Applicant existing = applicants.get(i);
+                if (existing.id() != updatedApplicant.id()
+                        && existing.identity().equalsIgnoreCase(updatedApplicant.identity().trim())) {
+                    throw new IllegalStateException("La cédula ya está asociada a otra solicitud.");
+                }
+                if (existing.id() == updatedApplicant.id()) {
+                    if (!AdmissionProcessing.PENDING.equals(existing.status())) {
+                        throw new IllegalStateException(
+                                "Solo se pueden actualizar solicitudes que aún estén pendientes.");
+                    }
+                    applicants.set(i, updatedApplicant);
+                    updated = true;
+                }
+            }
+            if (!updated) {
+                throw new IllegalStateException("No se encontró la solicitud que deseas actualizar.");
+            }
+            rewrite(applicants);
+        }
+
+        private void deletePending(int id) throws IOException {
+            List<Applicant> applicants = find("");
+            Applicant applicant = applicants.stream()
+                    .filter(record -> record.id() == id)
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No se encontró la solicitud seleccionada."));
+            if (!AdmissionProcessing.PENDING.equals(applicant.status())) {
+                throw new IllegalStateException(
+                        "Solo se pueden eliminar solicitudes que todavía estén pendientes.");
+            }
+            applicants.removeIf(record -> record.id() == id);
+            rewrite(applicants);
         }
 
         private void updateStatus(int id, String status) throws IOException {
